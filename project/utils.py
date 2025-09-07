@@ -55,5 +55,4 @@ def build_graph_two_cycles(n: int, m: int, labels: Tuple[str, str], path_save: P
         Filename or file handle for saving.
     """
     graph = cd.labeled_two_cycles_graph(n, m, labels=labels)
-    graph_pydot = nx.drawing.nx_pydot.to_pydot(graph)
-    graph_pydot.write_dot(path_save)
+    nx.drawing.nx_pydot.write_dot(graph, path_save)
