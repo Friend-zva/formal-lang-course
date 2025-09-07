@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Any
 
 import cfpq_data as cd
 import networkx as nx
@@ -10,7 +10,7 @@ import networkx as nx
 class MetadataGraph:
     count_nodes: int
     count_edges: int
-    tags_edges: set
+    tags_edges: set[Any]
 
 
 def get_metadata(name_graph: str) -> MetadataGraph:
@@ -56,4 +56,4 @@ def build_graph_two_cycles(n: int, m: int, labels: Tuple[str, str], path_save: P
     """
     graph = cd.labeled_two_cycles_graph(n, m, labels=labels)
     graph_pydot = nx.drawing.nx_pydot.to_pydot(graph)
-    graph_pydot.write(path_save, prog="dot", format="dot")
+    graph_pydot.write_dot(path_save)
