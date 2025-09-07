@@ -35,11 +35,10 @@ def test_get_metadata():
     }
 
 
-def test_build_graph_two_cycles():
+def test_build_graph_two_cycles(tmp_path: Path):
     name_file = "two_cycles.dot"
-    path = PATH_GRAPHS / "result" / name_file
-    build_graph_two_cycles(4, 6, ("a", "b"), path)
+    build_graph_two_cycles(4, 6, ("a", "b"), tmp_path / name_file)
     assert nx.utils.graphs_equal(
-        nx.nx_pydot.read_dot(path),
+        nx.nx_pydot.read_dot(tmp_path / name_file),
         nx.nx_pydot.read_dot(PATH_GRAPHS / "source" / name_file),
     )
