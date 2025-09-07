@@ -10,7 +10,7 @@ import networkx as nx
 class MetadataGraph:
     count_nodes: int
     count_edges: int
-    tags_edges: set[any]
+    tags_edges: set
 
 
 def get_metadata(name_graph: str) -> MetadataGraph:
