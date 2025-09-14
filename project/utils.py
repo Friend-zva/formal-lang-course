@@ -66,7 +66,7 @@ def build_graph_two_cycles(n: int, m: int, labels: Tuple[str, str], path_save: P
 
 
 def regex_to_dfa(regex: str) -> DeterministicFiniteAutomaton:
-    """Transforms the regular expression into a dfa.
+    """Transforms the regular expression into DFA.
 
     Parameters
     ----------
@@ -76,17 +76,18 @@ def regex_to_dfa(regex: str) -> DeterministicFiniteAutomaton:
     Returns
     ----------
     dfa : pyformlang.finite_automaton.DeterministicFiniteAutomaton
-        A dfa equivalent to the regex.
+        DFA equivalent to the regex.
     """
     reg = Regex(regex)
     enfa = reg.to_epsilon_nfa()
-    return enfa.to_deterministic()
+    dfa = enfa.to_deterministic()
+    return dfa
 
 
 def graph_to_nfa(
     graph: nx.MultiDiGraph, start_states: Set[int], final_states: Set[int]
 ) -> NondeterministicFiniteAutomaton:
-    """Imports a networkx graph into an nfa. Adds new initial and final states.
+    """Imports a networkx graph into NFA. Adds new initial and final states.
 
     Parameters
     ----------
@@ -102,7 +103,7 @@ def graph_to_nfa(
     Returns
     ----------
     nfa : pyformlang.finite_automaton.NondeterministicFiniteAutomaton
-        A nfa read from the graph.
+        NFA read from the graph.
     """
     nfa = NondeterministicFiniteAutomaton.from_networkx(graph)
 
