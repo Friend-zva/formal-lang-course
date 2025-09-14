@@ -110,18 +110,6 @@ def test_graph_to_nfa_from_generations():
     assert nfa.symbols == metadata.tags_edges
 
 
-def test_graph_to_nfa_from_generations():
-    name_graph = "generations"
-    metadata = get_metadata(name_graph)
-
-    archive = cd.download(name_graph)
-    graph = cd.graph_from_csv(archive)
-    nfa = graph_to_nfa(graph, set(), set())
-
-    assert len(nfa.start_states) == metadata.count_nodes
-    assert nfa.symbols == metadata.tags_edges
-
-
 def test_graph_to_nfa_from_graph_two_cycles(tmp_path: Path):
     name_file = "two_cycles.dot"
     count_nodes_one_cycles = 2
