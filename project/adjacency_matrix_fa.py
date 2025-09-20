@@ -10,49 +10,25 @@ from pyformlang.finite_automaton import (
 
 
 class AdjacencyMatrixFA:
-    def __init__(
-        self,
-        states: Set[State] = None,
-        symbols: Set[Symbol] = None,
-        adjacency_matrices: Dict[Symbol, lil_array] = None,
-        start_states: Set[State] = None,
-        final_states: Set[State] = None,
-    ):
-        if states:
-            states = {to_state(st) for st in states}
-        self._states = states or set()
+    def __init__(self, automation: NondeterministicFiniteAutomaton = None):
+        if automation:
+            self._init_from_automation(automation)
+        else:
+            self._init_empty()
 
-        if symbols:
-            symbols = {to_symbol(sym) for sym in symbols}
-        self._symbols = symbols or set()
+    def _init_empty(self):
+        self._states_ids = dict()
+        self._symbols = set()
+        self._adjacency_matrices = dict()
+        self._start_states = set()
+        self._final_states = set()
 
-        self._adjacency_matrices = adjacency_matrices or self._gen_empty_adjacency_matrices()
-
-        if start_states:
-            start_states = {to_state(st) for st in start_states}
-        self._start_states = start_states or set()
-
-        if final_states:
-            final_states = {to_state(st) for st in final_states}
-        self._final_states = final_states or set()
-
-        for state in self._start_states:
-            if state and state not in self._states:
-                self._states.add(state)
-
-        for state in self._final_states:
-            if state and state not in self._states:
-                self._states.add(state)
-
-        self._state_ids = self._gen_state_ids()
-
-    def __init__(self, fa: NondeterministicFiniteAutomaton):
-        self._states = fa.states
+    def _init_from_automation(self, fa: NondeterministicFiniteAutomaton):
+        self._states_ids = self._gen_states_ids(fa.states)
         self._symbols = fa.symbols
         self._adjacency_matrices = self._gen_empty_adjacency_matrices()
         self._start_states = fa.start_states
         self._final_states = fa.final_states
-        self._state_ids = self._gen_state_ids()
 
         graph = fa.to_networkx()
         for src, dst, sbl in graph.edges(data="label"):
@@ -61,8 +37,6 @@ class AdjacencyMatrixFA:
             source_state = self._get_state_id(src)
             destination_state = self._get_state_id(dst)
             self._adjacency_matrices[symbol][source_state, destination_state] = True
-
-        print(self._adjacency_matrices)
 
     def accepts(self, word: Iterable[Symbol]) -> bool:
         word = [to_symbol(x) for x in word]
@@ -96,12 +70,16 @@ class AdjacencyMatrixFA:
         state = to_state(state)
         return state in self._final_states
 
-    def _gen_state_ids(self) -> dict[State, int]:
-        return dict((st, id) for id, st in enumerate(self._states))
+    @property
+    def _states(self) -> Set[State]:
+        return set(self._states_ids.keys())
+
+    def _gen_states_ids(self, states: Set[State]) -> dict[State, int]:
+        return dict((to_state(st), id) for id, st in enumerate(states))
 
     def _get_state_id(self, state: State) -> int:
         state = to_state(state)
-        return self._state_ids[state]
+        return self._states_ids[state]
 
     def _gen_empty_adjacency_matrices(self) -> dict[Symbol, lil_array]:
         measure = len(self._states)
