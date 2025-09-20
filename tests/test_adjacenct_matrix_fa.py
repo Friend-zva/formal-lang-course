@@ -71,7 +71,7 @@ def test_adjacency_matrix_fa_from_dfa():
 
     amfa = AdjacencyMatrixFA(dfa)
     assert not amfa.is_empty()
-    assert amfa.accepts("abcd")
+    assert amfa.accepts("abcb")
 
 
 def test_adjacency_matrix_fa_from_nfa():
@@ -99,7 +99,7 @@ def test_adjacency_matrix_fa_from_nfa():
 def test_intersect_automata():
     dfa1 = AdjacencyMatrixFA(regex_to_dfa("(a a)*"))
     dfa2 = AdjacencyMatrixFA(regex_to_dfa("a*b*"))
-    dfa = intersect_automata(dfa1, dfa2)
+    amfa = intersect_automata(dfa1, dfa2)
 
-    assert dfa
-    assert dfa.accepts("aa")
+    assert amfa
+    assert amfa.accepts("aa")

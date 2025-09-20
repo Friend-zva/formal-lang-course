@@ -9,6 +9,8 @@ from pyformlang.finite_automaton import (
     State,
 )
 
+import networkx as nx
+
 
 def gen_states_ids(states: Set[State]) -> Dict[State, int]:
     return dict((st, id) for id, st in enumerate(states))
@@ -17,11 +19,13 @@ def gen_states_ids(states: Set[State]) -> Dict[State, int]:
 def gen_empty_adjacency_matrices(
     count_states, symbols, is_compressed
 ) -> Dict[Symbol, lil_array | csr_array]:
-    if is_compressed:
-        matrix = csr_array((count_states, count_states), dtype=bool)
-    else:
-        matrix = lil_array((count_states, count_states), dtype=bool)
-    return dict((to_symbol(sym), matrix) for sym in symbols)
+    def create_matrix():
+        if is_compressed:
+            return csr_array((count_states, count_states), dtype=bool)
+        else:
+            return lil_array((count_states, count_states), dtype=bool)
+
+    return dict((to_symbol(sym), create_matrix()) for sym in symbols)
 
 
 class AdjacencyMatrixFA:
@@ -45,7 +49,7 @@ class AdjacencyMatrixFA:
         self,
         states_ids: Dict[State, int] = None,
         symbols: Set[Symbol] = None,
-        adjacency_matrices: Dict[Symbol, lil_array] = None,
+        adjacency_matrices: Dict[Symbol, lil_array | csr_array] = None,
         start_states: Set[State] = None,
         final_states: Set[State] = None,
     ):
@@ -141,12 +145,12 @@ class AdjacencyMatrixFA:
         return set(self._states_ids.keys())
 
     @property
-    def symbols(self) -> Set[State]:
+    def symbols(self) -> Set[Symbol]:
         return self._symbols.copy()
 
     @property
     def count_states(self) -> int:
-        return len(self.states)
+        return len(self._states_ids)
 
     @property
     def start_states(self) -> Set[State]:
@@ -224,17 +228,14 @@ def intersect_automata(
 ) -> AdjacencyMatrixFA:
     states_ids, adjacency_matrices = dict(), dict()
     start_states, final_states = set(), set()
-    symbols = automaton1.symbols.union(automaton2.symbols)
+    symbols = automaton1.symbols.intersection(automaton2.symbols)
 
     for symbol in symbols:
-        try:
-            adjacency_matrices[symbol] = kron(
-                automaton1.adjacency_matrices[symbol],
-                automaton2.adjacency_matrices[symbol],
-                format="csr",
-            )
-        except:
-            continue
+        adjacency_matrices[symbol] = kron(
+            automaton1.adjacency_matrices[symbol],
+            automaton2.adjacency_matrices[symbol],
+            format="csr",
+        )
 
     for state1, id1 in automaton1.states_ids.items():
         for state2, id2 in automaton2.states_ids.items():
