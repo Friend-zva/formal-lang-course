@@ -191,7 +191,7 @@ class AdjacencyMatrixFA:
     def adjacency_matrices(self) -> Dict[Symbol, lil_array | csr_array]:
         return self._adjacency_matrices.copy()
 
-    def get_state_id(self, state: State) -> int:
+    def get_state_id(self, state: State) -> int | None:
         state = to_state(state)
         return self._states_ids[state]
 
@@ -216,22 +216,20 @@ class AdjacencyMatrixFA:
             return False
 
     def is_transition(self, state_from: State, symbol: Symbol, state_to: State) -> bool:
-        try:
-            state_from = self.get_state_id(state_from)
-            symbol = to_symbol(symbol)
-            state_to = self.get_state_id(state_to)
+        state_from = self.get_state_id(state_from)
+        symbol = to_symbol(symbol)
+        state_to = self.get_state_id(state_to)
+        if state_from is not None and state_to is not None:
             return self._adjacency_matrices[symbol][state_from, state_to]
-        except:
+        else:
             return False
 
     def add_transition(self, state_from: State, symbol: Symbol, state_to: State):
-        try:
-            state_from = self.get_state_id(state_from)
-            symbol = to_symbol(symbol)
-            state_to = self.get_state_id(state_to)
+        state_from = self.get_state_id(state_from)
+        symbol = to_symbol(symbol)
+        state_to = self.get_state_id(state_to)
+        if state_from is not None and state_to is not None:
             self._adjacency_matrices[symbol][state_from, state_to] = True
-        except:
-            return
 
     def transition_closure(self) -> csr_array:
         max_count_non_zero = self.count_states * self.count_states
