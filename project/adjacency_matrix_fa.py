@@ -2,7 +2,7 @@ from symtable import Symbol
 from typing import Iterable, Set, Dict
 
 from pyformlang.finite_automaton.finite_automaton import to_state, to_symbol
-from scipy.sparse import lil_array, kron, csr_array
+from scipy.sparse import lil_array, kron, csr_array, eye_array
 
 from pyformlang.finite_automaton import (
     NondeterministicFiniteAutomaton,
@@ -10,6 +10,8 @@ from pyformlang.finite_automaton import (
 )
 
 import networkx as nx
+
+from project.utils import graph_to_nfa, regex_to_dfa
 
 
 def gen_states_ids(states: Set[State]) -> Dict[State, int]:
@@ -111,6 +113,9 @@ class AdjacencyMatrixFA:
         return any(self.is_final_state(st) for st in states)
 
     def is_empty(self) -> bool:
+        return self.is_empty_transition_closure()
+
+    def is_empty_processing(self) -> bool:
         to_process = []
         processed = set()
         for state in self._start_states:
@@ -125,6 +130,16 @@ class AdjacencyMatrixFA:
                     if n_state not in processed:
                         to_process.append(n_state)
                         processed.add(n_state)
+
+        return True
+
+    def is_empty_transition_closure(self) -> bool:
+        ts_matrix = self.transition_closure()
+
+        for _, start_id in self.start_states_ids.items():
+            for _, final_id in self.final_states_ids.items():
+                if ts_matrix[start_id, final_id]:
+                    return False
 
         return True
 
@@ -157,8 +172,20 @@ class AdjacencyMatrixFA:
         return self._start_states.copy()
 
     @property
+    def start_states_ids(self) -> Dict[State, int]:
+        return dict(
+            (st, id) for (st, id) in self._states_ids.items() if self.is_start_state(st)
+        )
+
+    @property
     def final_states(self) -> Set[State]:
         return self._final_states.copy()
+
+    @property
+    def final_states_ids(self) -> Dict[State, int]:
+        return dict(
+            (st, id) for (st, id) in self._states_ids.items() if self.is_final_state(st)
+        )
 
     @property
     def adjacency_matrices(self) -> Dict[Symbol, lil_array | csr_array]:
@@ -167,22 +194,6 @@ class AdjacencyMatrixFA:
     def get_state_id(self, state: State) -> int:
         state = to_state(state)
         return self._states_ids[state]
-
-    def _get_next_states(self, states: Iterable[State], symbol: Symbol) -> Set[State]:
-        next_states = set()
-        for state in states:
-            for n_state in self._transition_function(state, symbol):
-                next_states.add(n_state)
-
-        return next_states
-
-    def _transition_function(self, state: State, symbol: Symbol) -> Set[State]:
-        next_states = set()
-        for n_state in self.states:
-            if self.is_transition(state, symbol, n_state):
-                next_states.add(n_state)
-
-        return next_states
 
     def add_state_id(self, state: State, id: int):
         state = to_state(state)
@@ -222,6 +233,39 @@ class AdjacencyMatrixFA:
         except:
             return
 
+    def transition_closure(self) -> csr_array:
+        max_count_non_zero = self.count_states * self.count_states
+        e_matrix = eye_array(self.count_states, dtype=bool, format="csr")
+
+        tc_matrix = e_matrix
+        for symbol in self._symbols:
+            tc_matrix += self._adjacency_matrices[symbol]
+
+        for _ in range(0, self.count_states):
+            count_non_zero = tc_matrix.nnz
+            if count_non_zero == max_count_non_zero:
+                break
+
+            tc_matrix @= tc_matrix
+
+        return tc_matrix
+
+    def _get_next_states(self, states: Iterable[State], symbol: Symbol) -> Set[State]:
+        next_states = set()
+        for state in states:
+            for n_state in self._transition_function(state, symbol):
+                next_states.add(n_state)
+
+        return next_states
+
+    def _transition_function(self, state: State, symbol: Symbol) -> Set[State]:
+        next_states = set()
+        for n_state in self.states:
+            if self.is_transition(state, symbol, n_state):
+                next_states.add(n_state)
+
+        return next_states
+
 
 def intersect_automata(
     automaton1: AdjacencyMatrixFA, automaton2: AdjacencyMatrixFA
@@ -256,3 +300,29 @@ def intersect_automata(
         final_states=final_states,
         adjacency_matrices=adjacency_matrices,
     )
+
+
+def tensor_based_rpq(
+    regex: str, graph: nx.MultiDiGraph, start_nodes: Set[int], final_nodes: Set[int]
+) -> set[tuple[int, int]]:
+    nfa = graph_to_nfa(graph, start_nodes, final_nodes)
+    graph_amfa = AdjacencyMatrixFA(nfa)
+
+    dfa = regex_to_dfa(regex)
+    request_amfa = AdjacencyMatrixFA(dfa)
+
+    front_amfa = intersect_automata(graph_amfa, request_amfa)
+    tc_front = front_amfa.transition_closure()
+
+    fronts = set()
+    for s_st_graph, s_id_graph in graph_amfa.start_states_ids.items():
+        for f_st_graph, f_id_graph in graph_amfa.final_states_ids.items():
+            for _, s_id_request in request_amfa.start_states_ids.items():
+                for _, f_id_request in request_amfa.final_states_ids.items():
+                    if tc_front[
+                        s_id_graph * request_amfa.count_states + s_id_request,
+                        f_id_graph * request_amfa.count_states + f_id_request,
+                    ]:
+                        fronts.add((s_st_graph.value, f_st_graph.value))
+
+    return fronts
