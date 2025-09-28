@@ -124,5 +124,7 @@ def test_rpqs():
     )
     regex = "a|(ba)*"
 
-    assert ms_bfs_based_rpq(regex, graph, {0}, {0}) == tensor_based_rpq(regex, graph, {0}, {0}) == {(0, 0)}
+    assert ms_bfs_based_rpq(regex, graph, {0}, {0}) == tensor_based_rpq(
+        regex, graph, {0}, {0}
+    )
     assert ms_bfs_based_rpq(regex, graph, {0}, {0}) == {(0, 0)}
