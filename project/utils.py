@@ -81,7 +81,7 @@ def regex_to_dfa(regex: str) -> DeterministicFiniteAutomaton:
     reg = Regex(regex)
     enfa = reg.to_epsilon_nfa()
     dfa = enfa.to_deterministic()
-    return dfa
+    return dfa.minimize()
 
 
 def graph_to_nfa(
