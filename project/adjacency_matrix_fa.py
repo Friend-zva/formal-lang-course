@@ -2,7 +2,8 @@ from symtable import Symbol
 from typing import Iterable, Set, Dict
 
 from pyformlang.finite_automaton.finite_automaton import to_state, to_symbol
-from scipy.sparse import lil_array, kron, csr_array, eye_array
+from rdflib.util import first
+from scipy.sparse import lil_array, kron, csr_array, eye_array, vstack, hstack
 
 from pyformlang.finite_automaton import (
     NondeterministicFiniteAutomaton,
@@ -312,7 +313,7 @@ def tensor_based_rpq(
     front_amfa = intersect_automata(graph_amfa, request_amfa)
     tc_front = front_amfa.transition_closure()
 
-    fronts = set()
+    pairs = set()
     for s_st_graph, s_id_graph in graph_amfa.start_states_ids.items():
         for f_st_graph, f_id_graph in graph_amfa.final_states_ids.items():
             for _, s_id_request in request_amfa.start_states_ids.items():
@@ -321,6 +322,60 @@ def tensor_based_rpq(
                         s_id_graph * request_amfa.count_states + s_id_request,
                         f_id_graph * request_amfa.count_states + f_id_request,
                     ]:
-                        fronts.add((s_st_graph.value, f_st_graph.value))
+                        pairs.add((s_st_graph.value, f_st_graph.value))
 
-    return fronts
+    return pairs
+
+
+def ms_bfs_based_rpq(
+    regex: str, graph: nx.MultiDiGraph, start_nodes: set[int], final_nodes: set[int]
+) -> set[tuple[int, int]]:
+    nfa = graph_to_nfa(graph, start_nodes, final_nodes)
+    graph_amfa = AdjacencyMatrixFA(nfa)
+    n = graph_amfa.count_states
+
+    dfa = regex_to_dfa(regex)
+    request_amfa = AdjacencyMatrixFA(dfa)
+    m = request_amfa.count_states
+    start_id_request = first(request_amfa.start_states_ids.items())[1]
+
+    fronts, matrices_visited = [], []
+    for _, start_id in graph_amfa.start_states_ids.items():
+        front = lil_array((n, m), dtype=bool)
+        front[start_id, start_id_request] = True
+        fronts.append(front)
+        matrices_visited.append(front.copy())
+
+    symbols = graph_amfa.symbols.intersection(request_amfa.symbols)
+    tr_adjacency_matrices_graph = dict(
+        (sym, m.transpose()) for sym, m in graph_amfa.adjacency_matrices.items()
+    )
+    matrix_true = lil_array((n, m), dtype=bool)
+    matrix_true[:, :] = True
+
+    while any(front.count_nonzero() != 0 for front in fronts):
+        for i in range(len(fronts)):
+            if fronts[i].count_nonzero() == 0:
+                continue
+
+            for symbol in symbols:
+                tr_adj_matrix_graph = tr_adjacency_matrices_graph[symbol]
+                adj_matrix_request = request_amfa.adjacency_matrices[symbol]
+                fronts[i] += (tr_adj_matrix_graph @ fronts[i] @ adj_matrix_request)
+
+            fronts[i] = matrix_true - ((matrix_true - fronts[i]) + matrices_visited[i])
+            matrices_visited[i] += fronts[i]
+
+    final_states_request = lil_array((request_amfa.count_states, 1), dtype=bool)
+    for _, final_id in request_amfa.final_states_ids.items():
+        final_states_request[final_id, 0] = True
+
+    pairs = set()
+    for i, (s_state, s_id) in enumerate(graph_amfa.start_states_ids.items()):
+        final_states_graph = matrices_visited[i] @ final_states_request
+
+        for f_state, f_id in graph_amfa.final_states_ids.items():
+            if final_states_graph[f_id, 0]:
+                pairs.add((s_state.value, f_state.value))
+
+    return pairs
