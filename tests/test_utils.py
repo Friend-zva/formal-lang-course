@@ -2,12 +2,19 @@ from pathlib import Path
 from project.utils import (
     get_metadata,
     build_graph_two_cycles,
+    regex_to_dfa,
+    graph_to_nfa,
 )
+from pyformlang.finite_automaton import NondeterministicFiniteAutomaton
 
 import networkx as nx
+import cfpq_data as cd
 
 
 PATH_GRAPHS = Path(__file__).parent / "graphs"
+
+
+# Tests for "Task 1"
 
 
 def test_get_metadata():
@@ -42,3 +49,82 @@ def test_build_graph_two_cycles(tmp_path: Path):
         nx.nx_pydot.read_dot(tmp_path / name_file),
         nx.nx_pydot.read_dot(PATH_GRAPHS / "source" / name_file),
     )
+
+
+# Tests for "Task 2"
+
+
+def test_regex_to_dfa():
+    dfa = regex_to_dfa("a(b)*(c|d)")
+
+    assert not dfa.is_empty()
+    assert dfa.is_deterministic()
+    assert dfa.is_equivalent_to(dfa.minimize())
+    assert dfa.accepts("abbbd")
+
+
+def test_graph_to_nfa_from_usual_graph():
+    edges = [(1, 2), (2, 3), (3, 4)]
+    graph = nx.MultiDiGraph(edges)
+    nfa = graph_to_nfa(graph, set(), set())
+
+    assert not nfa.is_empty()
+    assert nfa.start_states == {1, 2, 3, 4}
+    assert nfa.final_states == {1, 2, 3, 4}
+
+
+def test_graph_to_nfa_from_nfa():
+    nfa = NondeterministicFiniteAutomaton()
+    nfa.add_transitions(
+        [
+            (0, "a", 1),
+            (0, "a", 0),
+            (1, "b", 2),
+            (2, "c", 3),
+            (3, "b", 4),
+            (2, "d", 4),
+        ]
+    )
+    start_state = 0
+    final_state = 4
+    nfa.add_start_state(start_state)
+    nfa.add_final_state(final_state)
+
+    graph = nfa.to_networkx()
+    nfa_from = graph_to_nfa(graph, [start_state], [final_state])
+
+    assert not nfa_from.is_empty()
+    assert nfa_from.is_equivalent_to(nfa)
+    assert nfa_from.accepts("aabcb")
+
+
+def test_graph_to_nfa_from_generations():
+    name_graph = "generations"
+    metadata = get_metadata(name_graph)
+
+    archive = cd.download(name_graph)
+    graph = cd.graph_from_csv(archive)
+    nfa = graph_to_nfa(graph, set(), set())
+
+    assert len(nfa.start_states) == metadata.count_nodes
+    assert nfa.symbols == metadata.tags_edges
+
+
+def test_graph_to_nfa_from_graph_two_cycles(tmp_path: Path):
+    name_file = "two_cycles.dot"
+    count_nodes_one_cycles = 2
+    count_nodes_two_cycles = 3
+    labels = ("a", "b")
+    build_graph_two_cycles(
+        count_nodes_one_cycles, count_nodes_two_cycles, labels, tmp_path / name_file
+    )
+
+    graph = nx.nx_pydot.read_dot(tmp_path / name_file)
+    nfa = graph_to_nfa(graph, set(), set())
+
+    assert len(nfa.start_states) == (
+        count_nodes_one_cycles + count_nodes_two_cycles + 1
+    )
+    assert nfa.symbols == set(labels)
+    assert nfa.accepts("aabbbb")
+    assert not nfa.accepts("aba")
