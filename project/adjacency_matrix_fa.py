@@ -3,14 +3,14 @@ from typing import Iterable, Set, Dict, Tuple
 
 from pyformlang.finite_automaton.finite_automaton import to_state, to_symbol
 from rdflib.util import first
-from scipy.sparse import lil_array, kron, csr_array, eye_array, vstack, hstack
+from scipy.sparse import lil_array, kron, csr_array, eye_array
 
 from pyformlang.finite_automaton import (
     NondeterministicFiniteAutomaton,
     State,
 )
 
-import networkx as nx
+from networkx import MultiDiGraph
 
 from project.utils import graph_to_nfa, regex_to_dfa
 
@@ -508,7 +508,7 @@ def intersect_automata(
 
 
 def tensor_based_rpq(
-    regex: str, graph: nx.MultiDiGraph, start_nodes: Set[int], final_nodes: Set[int]
+    regex: str, graph: MultiDiGraph, start_nodes: Set[int], final_nodes: Set[int]
 ) -> Set[Tuple[int, int]]:
     """Evaluate regular path queries using tensor product
 
@@ -516,7 +516,7 @@ def tensor_based_rpq(
     ----------
     regex : str
         Regular expression defining the path constraint
-    graph : nx.MultiDiGraph
+    graph : MultiDiGraph
         Graph where edges are labeled with symbols
     start_nodes : Set[int]
         Set of start nodes
@@ -552,14 +552,14 @@ def tensor_based_rpq(
 
 
 def ms_bfs_based_rpq(
-    regex: str, graph: nx.MultiDiGraph, start_nodes: Set[int], final_nodes: Set[int]
+    regex: str, graph: MultiDiGraph, start_nodes: Set[int], final_nodes: Set[int]
 ) -> Set[Tuple[int, int]]:
     """Evaluate regular path queries using multi-source BFS
 
     ----------
     regex : str
         Regular expression defining the path constraint
-    graph : nx.MultiDiGraph
+    graph : MultiDiGraph
         Graph where edges are labeled with symbols
     start_nodes : Set[int]
         Set of start nodes
@@ -591,7 +591,7 @@ def ms_bfs_based_rpq(
     tr_adjacency_matrices_graph = dict(
         (sym, m.transpose()) for sym, m in graph_amfa.adjacency_matrices.items()
     )
-    matrix_true = lil_array((n, m), dtype=bool)
+    matrix_true = csr_array((n, m), dtype=bool)
     matrix_true[:, :] = True
 
     while any(front.nnz for front in fronts):
@@ -602,7 +602,7 @@ def ms_bfs_based_rpq(
             for symbol in symbols:
                 tr_adj_matrix_graph = tr_adjacency_matrices_graph[symbol]
                 adj_matrix_request = request_amfa.adjacency_matrices[symbol]
-                fronts[i] += (tr_adj_matrix_graph @ fronts[i] @ adj_matrix_request)
+                fronts[i] += tr_adj_matrix_graph @ fronts[i] @ adj_matrix_request
 
             fronts[i] = matrix_true - ((matrix_true - fronts[i]) + matrices_visited[i])
             matrices_visited[i] += fronts[i]
@@ -612,7 +612,7 @@ def ms_bfs_based_rpq(
         final_states_request[final_id, 0] = True
 
     pairs = set()
-    for i, (s_state, s_id) in enumerate(graph_amfa.start_states_ids.items()):
+    for i, (s_state, _) in enumerate(graph_amfa.start_states_ids.items()):
         final_states_graph = matrices_visited[i] @ final_states_request
 
         for f_state, f_id in graph_amfa.final_states_ids.items():
