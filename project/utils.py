@@ -1,16 +1,23 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple, Any
+from typing import Tuple, Any, Set
 
 import cfpq_data as cd
 import networkx as nx
+
+from pyformlang.finite_automaton import (
+    DeterministicFiniteAutomaton,
+    NondeterministicFiniteAutomaton,
+    State,
+)
+from pyformlang.regular_expression import Regex
 
 
 @dataclass
 class MetadataGraph:
     count_nodes: int
     count_edges: int
-    tags_edges: set[Any]
+    tags_edges: Set[Any]
 
 
 def get_metadata(name_graph: str) -> MetadataGraph:
@@ -48,7 +55,7 @@ def build_graph_two_cycles(n: int, m: int, labels: Tuple[str, str], path_save: P
     m : int
         The number of nodes in the second cycle without a common node.
 
-    labels: Tuple[str, str]
+    labels : Tuple[str, str]
         Labels that will be used to mark the edges of the graph.
 
     path_save : str or file
@@ -56,3 +63,54 @@ def build_graph_two_cycles(n: int, m: int, labels: Tuple[str, str], path_save: P
     """
     graph = cd.labeled_two_cycles_graph(n, m, labels=labels)
     nx.drawing.nx_pydot.write_dot(graph, path_save)
+
+
+def regex_to_dfa(regex: str) -> DeterministicFiniteAutomaton:
+    """Transforms the regular expression into DFA.
+
+    Parameters
+    ----------
+    regex : str
+        The regex represented as a string.
+
+    Returns
+    ----------
+    dfa : pyformlang.finite_automaton.DeterministicFiniteAutomaton
+        DFA equivalent to the regex.
+    """
+    reg = Regex(regex)
+    enfa = reg.to_epsilon_nfa()
+    dfa = enfa.to_deterministic()
+    return dfa
+
+
+def graph_to_nfa(
+    graph: nx.MultiDiGraph, start_states: Set[int], final_states: Set[int]
+) -> NondeterministicFiniteAutomaton:
+    """Imports a networkx graph into NFA. Adds new initial and final states.
+
+    Parameters
+    ----------
+    graph : networkx.MultiDiGraph
+        The graph representation of the automaton.
+
+    start_states : Set[int]
+        New initial states.
+
+    final_states : Set[int]
+        New final states.
+
+    Returns
+    ----------
+    nfa : pyformlang.finite_automaton.NondeterministicFiniteAutomaton
+        NFA read from the graph.
+    """
+    nfa = NondeterministicFiniteAutomaton.from_networkx(graph)
+
+    for state in start_states or graph.nodes:
+        nfa.add_start_state(State(state))
+
+    for state in final_states or graph.nodes:
+        nfa.add_final_state(State(state))
+
+    return nfa
