@@ -405,7 +405,7 @@ class AdjacencyMatrixFA:
             tc_matrix += self._adjacency_matrices[symbol]
 
         for _ in range(0, self.count_states):
-            count_non_zero = tc_matrix.nnz
+            count_non_zero = tc_matrix.count_nonzero()
             if count_non_zero == max_count_non_zero:
                 break
 
@@ -594,9 +594,9 @@ def ms_bfs_based_rpq(
     matrix_true = csr_array((n, m), dtype=bool)
     matrix_true[:, :] = True
 
-    while any(front.nnz for front in fronts):
+    while any(front.count_nonzero() for front in fronts):
         for i in range(len(fronts)):
-            if not fronts[i].nnz:
+            if not fronts[i].count_nonzero():
                 continue
 
             for symbol in symbols:
