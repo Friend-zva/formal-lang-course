@@ -556,6 +556,7 @@ def ms_bfs_based_rpq(
 ) -> Set[Tuple[int, int]]:
     """Evaluate regular path queries using multi-source BFS
 
+    Parameters
     ----------
     regex : str
         Regular expression defining the path constraint
