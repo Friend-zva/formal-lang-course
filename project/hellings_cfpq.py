@@ -63,12 +63,8 @@ def hellings_based_cfpq(
     result = set()
     process = deque()
 
-    for n in graph.nodes:
-        for p in cwnf.productions:
-            if [Epsilon()] != p.body:
-                continue
-            var = p.head
-
+    for var in cwnf.get_nullable_symbols():
+        for n in graph.nodes:
             triple = (var, n, n)
             result.add(triple)
             process.append(triple)
@@ -96,11 +92,10 @@ def hellings_based_cfpq(
                     continue
                 var_k = p.head
 
-                triple = (var_k, v1, u)
+                triple = (var_k, v1, u_)
                 if triple not in result:
                     process.append(triple)
                     adder.add(triple)
-        result = result.union(adder)
 
         for var_j, u, u1 in result:
             if u != u_:
@@ -111,10 +106,11 @@ def hellings_based_cfpq(
                     continue
                 var_k = p.head
 
-                triple = (var_k, v, u1)
+                triple = (var_k, v_, u1)
                 if triple not in result:
                     process.append(triple)
                     adder.add(triple)
+
         result = result.union(adder)
 
     if start_nodes is None:
