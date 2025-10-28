@@ -1,12 +1,12 @@
 from typing import Iterable, Set, Dict, Tuple
-
-from pyformlang.finite_automaton.finite_automaton import to_state, to_symbol
 from rdflib.util import first
+
+from networkx import MultiDiGraph
+
 from scipy.sparse import lil_array, kron, csr_array, eye_array
 
 from pyformlang.finite_automaton import NondeterministicFiniteAutomaton, State, Symbol
-
-from networkx import MultiDiGraph
+from pyformlang.finite_automaton.finite_automaton import to_state, to_symbol
 
 from project.utils import graph_to_nfa, regex_to_dfa
 
