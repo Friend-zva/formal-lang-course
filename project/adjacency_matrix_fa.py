@@ -1,14 +1,10 @@
-from symtable import Symbol
 from typing import Iterable, Set, Dict, Tuple
 
 from pyformlang.finite_automaton.finite_automaton import to_state, to_symbol
 from rdflib.util import first
 from scipy.sparse import lil_array, kron, csr_array, eye_array
 
-from pyformlang.finite_automaton import (
-    NondeterministicFiniteAutomaton,
-    State,
-)
+from pyformlang.finite_automaton import NondeterministicFiniteAutomaton, State, Symbol
 
 from networkx import MultiDiGraph
 
@@ -556,6 +552,7 @@ def ms_bfs_based_rpq(
 ) -> Set[Tuple[int, int]]:
     """Evaluate regular path queries using multi-source BFS
 
+    Parameters
     ----------
     regex : str
         Regular expression defining the path constraint
