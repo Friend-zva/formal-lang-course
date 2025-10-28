@@ -3,8 +3,14 @@ from pyformlang.finite_automaton import (
     DeterministicFiniteAutomaton,
 )
 from scipy.sparse import lil_array
+from networkx import MultiDiGraph
 
-from project.adjacency_matrix_fa import AdjacencyMatrixFA, intersect_automata
+from project.adjacency_matrix_fa import (
+    AdjacencyMatrixFA,
+    intersect_automata,
+    tensor_based_rpq,
+    ms_bfs_based_rpq,
+)
 from project.utils import regex_to_dfa
 
 
@@ -103,3 +109,22 @@ def test_intersect_automata():
 
     assert amfa
     assert amfa.accepts("aa")
+
+
+def test_rpqs():
+    graph = MultiDiGraph()
+    graph.add_node(0, start_node=True, final_node=True)
+    graph.add_edges_from(
+        [
+            (0, 0, {"label": "a"}),
+            (0, 1, {"label": "b"}),
+            (1, 0, {"label": "b"}),
+            (1, 1, {"label": "a"}),
+        ]
+    )
+    regex = "a|(ba)*"
+
+    assert ms_bfs_based_rpq(regex, graph, {0}, {0}) == tensor_based_rpq(
+        regex, graph, {0}, {0}
+    )
+    assert ms_bfs_based_rpq(regex, graph, {0}, {0}) == {(0, 0)}
