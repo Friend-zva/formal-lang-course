@@ -72,7 +72,7 @@ def matrix_based_cfpq(
         is_changed = False
 
         for A_i, As in ps.items():
-            for (A_j, A_k) in As:
+            for A_j, A_k in As:
                 cnz_old = T[A_i].count_nonzero()
                 T[A_i] += T[A_j] @ T[A_k]
 
