@@ -1,5 +1,4 @@
-from typing import Iterable, Set, Dict, Tuple
-from rdflib.util import first
+from typing import Iterable, Set, Dict, Tuple, Any
 
 from networkx import MultiDiGraph
 
@@ -115,18 +114,21 @@ class AdjacencyMatrixFA:
         graph = fa.to_networkx()
         for src, dst, sym in graph.edges(data="label"):
             if sym:
+                src = to_state(src)
+                dst = to_state(dst)
+                sym = to_symbol(sym)
                 self.add_transition(src, sym, dst)
 
         self._adjacency_matrices = dict(
             (sym, m.tocsr()) for (sym, m) in self._adjacency_matrices.items()
         )
 
-    def accepts(self, word: Iterable[Symbol]) -> bool:
+    def accepts(self, word: Iterable[Any]) -> bool:
         """Checks whether the AMFA accepts a given word
 
         Parameters
         ----------
-        word : iterable of Symbol
+        word : iterable of Any
             The input word to process
 
         Returns
@@ -185,19 +187,19 @@ class AdjacencyMatrixFA:
         """
         ts_matrix = self.transition_closure()
 
-        for _, start_id in self.start_states_ids.items():
-            for _, final_id in self.final_states_ids.items():
-                if ts_matrix[start_id, final_id]:
+        for _, s_id in self.start_states_ids.items():
+            for _, f_id in self.final_states_ids.items():
+                if ts_matrix[s_id, f_id]:
                     return False
 
         return True
 
-    def is_start_state(self, state: State) -> bool:
+    def is_start_state(self, state: Any) -> bool:
         """Checks if a state is start
 
         Parameters
         ----------
-        state : :class:`~pyformlang.finite_automaton.State`
+        state : Any
             The state to check
 
         Returns
@@ -208,12 +210,12 @@ class AdjacencyMatrixFA:
         state = to_state(state)
         return state in self._start_states
 
-    def is_final_state(self, state: State) -> bool:
+    def is_final_state(self, state: Any) -> bool:
         """Checks if a state is final
 
         Parameters
         ----------
-        state : :class:`~pyformlang.finite_automaton.State`
+        state : Any
             The state to check
 
         Returns
@@ -273,12 +275,12 @@ class AdjacencyMatrixFA:
         """The mapping of adjacency matrices to all symbols"""
         return self._adjacency_matrices.copy()
 
-    def get_state_id(self, state: State) -> int | None:
+    def get_state_id(self, state: Any) -> int | None:
         """Get the integer id for a state
 
         Parameters
         ----------
-        state : :class:`~pyformlang.finite_automaton.State`
+        state : Any
             The state to look up
 
         Returns
@@ -289,12 +291,12 @@ class AdjacencyMatrixFA:
         state = to_state(state)
         return self._states_ids.get(state)
 
-    def add_state_id(self, state: State, id: int):
+    def add_state_id(self, state: Any, id: int):
         """Add a state with specified id
 
         Parameters
         ----------
-        state : :class:`~pyformlang.finite_automaton.State`
+        state : Any
             The state to add
         id : int
             The integer id
@@ -302,12 +304,12 @@ class AdjacencyMatrixFA:
         state = to_state(state)
         self._states_ids[state] = id
 
-    def add_start_state(self, state: State) -> bool:
+    def add_start_state(self, state: Any) -> bool:
         """Add a start state
 
         Parameters
         ----------
-        state : :class:`~pyformlang.finite_automaton.State`
+        state : Any
             The state to mark as start
 
         Returns
@@ -322,12 +324,12 @@ class AdjacencyMatrixFA:
         else:
             return False
 
-    def add_final_state(self, state: State) -> bool:
+    def add_final_state(self, state: Any) -> bool:
         """Add a final state
 
         Parameters
         ----------
-        state : :class:`~pyformlang.finite_automaton.State`
+        state : Any
             The state to mark as final
 
         Returns
@@ -342,17 +344,40 @@ class AdjacencyMatrixFA:
         else:
             return False
 
-    def is_transition(self, state_from: State, symbol: Symbol, state_to: State) -> bool:
+    def add_symbol(self, symbol: Any) -> bool:
+        """Add a new symbol
+
+        Parameters
+        ----------
+        symbol : Any
+            The symbol
+
+        Returns
+        -------
+        is_added : bool
+            True if successful, False if state already exist in set of symbols
+        """
+        symbol = to_symbol(symbol)
+        if symbol not in self.symbols:
+            self._symbols.add(symbol)
+            self._adjacency_matrices[symbol] = lil_array(
+                (self.count_states, self.count_states), dtype=bool
+            )
+            return True
+        else:
+            return False
+
+    def is_transition(self, state_from: Any, symbol: Any, state_to: Any) -> bool:
         """Check if a transition exists
 
         Parameters
         ----------
-        state_from : :class:`~pyformlang.finite_automaton.State`
-            Source state
-        symbol : :class:`~pyformlang.finite_automaton.Symbol`
-            Input symbol
-        state_to : :class:`~pyformlang.finite_automaton.State`
-            Destination state
+        state_from : Any
+            The source state
+        symbol : Any
+            The input symbol
+        state_to : Any
+            The destination state
 
         Returns
         -------
@@ -367,17 +392,17 @@ class AdjacencyMatrixFA:
         else:
             return False
 
-    def add_transition(self, state_from: State, symbol: Symbol, state_to: State):
+    def add_transition(self, state_from: Any, symbol: Any, state_to: Any):
         """Add a transition to the AMFA
 
         Parameters
         ----------
-        state_from : :class:`~pyformlang.finite_automaton.State`
-            Source state
-        symbol : :class:`~pyformlang.finite_automaton.Symbol`
-            Input symbol
-        state_to : :class:`~pyformlang.finite_automaton.State`
-            Destination state
+        state_from : Any
+            The source state
+        symbol : Any
+            The input symbol
+        state_to : Any
+            The destination state
         """
         state_from = self.get_state_id(state_from)
         symbol = to_symbol(symbol)
@@ -415,9 +440,9 @@ class AdjacencyMatrixFA:
         Parameters
         ----------
         states : iterable of State
-            Current states
+            The current states
         symbol : :class:`~pyformlang.finite_automaton.Symbol`
-            Input symbol
+            The input symbol
 
         Returns
         -------
@@ -437,9 +462,9 @@ class AdjacencyMatrixFA:
         Parameters
         ----------
         state : :class:`~pyformlang.finite_automaton.State`
-            Source state
+            The source state
         symbol : :class:`~pyformlang.finite_automaton.Symbol`
-            Input symbol
+            The input symbol
 
         Returns
         -------
@@ -455,14 +480,15 @@ class AdjacencyMatrixFA:
 
 
 def intersect_automata(
-    automaton1: AdjacencyMatrixFA, automaton2: AdjacencyMatrixFA
+    automaton1: AdjacencyMatrixFA,
+    automaton2: AdjacencyMatrixFA,
 ) -> AdjacencyMatrixFA:
     """Compute the intersection of two finite automata using tensor product
 
     Parameters
     ----------
     automaton1 : AdjacencyMatrixFA
-        First finite automaton
+        First  finite automaton
     automaton2 : AdjacencyMatrixFA
         Second finite automaton
 
@@ -497,9 +523,9 @@ def intersect_automata(
     return AdjacencyMatrixFA(
         states_ids=states_ids,
         symbols=symbols,
+        adjacency_matrices=adjacency_matrices,
         start_states=start_states,
         final_states=final_states,
-        adjacency_matrices=adjacency_matrices,
     )
 
 
@@ -512,7 +538,7 @@ def tensor_based_rpq(
     ----------
     regex : str
         Regular expression defining the path constraint
-    graph : MultiDiGraph
+    graph : :class:`~networkx.MultiDiGraph`
         Graph where edges are labeled with symbols
     start_nodes : Set[int]
         Set of start nodes
@@ -525,24 +551,90 @@ def tensor_based_rpq(
         Set of node pairs (start, final) connected by paths matching the regex
     """
     nfa = graph_to_nfa(graph, start_nodes, final_nodes)
-    graph_amfa = AdjacencyMatrixFA(nfa)
+    amfa_graph = AdjacencyMatrixFA(nfa)
 
     dfa = regex_to_dfa(regex)
-    request_amfa = AdjacencyMatrixFA(dfa)
+    amfa_request = AdjacencyMatrixFA(dfa)
+    m = amfa_request.count_states
 
-    front_amfa = intersect_automata(graph_amfa, request_amfa)
-    tc_front = front_amfa.transition_closure()
+    amfa_front = intersect_automata(amfa_graph, amfa_request)
+    tc_front = amfa_front.transition_closure()
 
     pairs = set()
-    for s_st_graph, s_id_graph in graph_amfa.start_states_ids.items():
-        for f_st_graph, f_id_graph in graph_amfa.final_states_ids.items():
-            for _, s_id_request in request_amfa.start_states_ids.items():
-                for _, f_id_request in request_amfa.final_states_ids.items():
+    for s_st_graph, s_id_graph in amfa_graph.start_states_ids.items():
+        for f_st_graph, f_id_graph in amfa_graph.final_states_ids.items():
+            for _, s_id_request in amfa_request.start_states_ids.items():
+                for _, f_id_request in amfa_request.final_states_ids.items():
                     if tc_front[
-                        s_id_graph * request_amfa.count_states + s_id_request,
-                        f_id_graph * request_amfa.count_states + f_id_request,
+                        s_id_graph * m + s_id_request,
+                        f_id_graph * m + f_id_request,
                     ]:
                         pairs.add((s_st_graph.value, f_st_graph.value))
+
+    return pairs
+
+
+def ms_bfs(
+    automaton1: AdjacencyMatrixFA,
+    automaton2: AdjacencyMatrixFA,
+) -> Set[Tuple[Tuple[Any, Any], Tuple[int, int]]]:
+    """Compute BFS of two finite automata using the multiple sources algorithm
+
+    Parameters
+    ----------
+    automaton1 : AdjacencyMatrixFA
+        First  finite automaton
+    automaton2 : AdjacencyMatrixFA
+        Second finite automaton
+
+    Returns
+    -------
+    pairs : Set[Tuple[Tuple[Any, Any], Tuple[int, int]]]
+        Set of pairs (start_value, final_value) and (start_id, final_id) connected by paths
+    """
+    n = automaton1.count_states
+    m = automaton2.count_states
+
+    fronts, matrices_visited = [], []
+    for _, s_id1 in automaton1.start_states_ids.items():
+        front = lil_array((n, m), dtype=bool)
+        for _, s_id2 in automaton2.start_states_ids.items():
+            front[s_id1, s_id2] = True
+
+        fronts.append(front)
+        matrices_visited.append(front.copy())
+
+    symbols = automaton1.symbols.intersection(automaton2.symbols)
+    adj_matrices1_tr = dict(
+        (sym, m.transpose()) for sym, m in automaton1.adjacency_matrices.items()
+    )
+    matrix_true = lil_array((n, m), dtype=bool)
+    matrix_true[:, :] = True
+
+    while any(front.count_nonzero() for front in fronts):
+        for i in range(len(fronts)):
+            if not fronts[i].count_nonzero():
+                continue
+
+            for symbol in symbols:
+                adj_matrix1_tr = adj_matrices1_tr[symbol]
+                adj_matrix2 = automaton2.adjacency_matrices[symbol]
+                fronts[i] += adj_matrix1_tr @ fronts[i] @ adj_matrix2
+
+            fronts[i] = matrix_true - ((matrix_true - fronts[i]) + matrices_visited[i])
+            matrices_visited[i] += fronts[i]
+
+    final_states2 = lil_array((m, 1), dtype=bool)
+    for _, f_id in automaton2.final_states_ids.items():
+        final_states2[f_id, 0] = True
+
+    pairs = set()
+    for i, (s_state, s_id) in enumerate(automaton1.start_states_ids.items()):
+        final_states1 = matrices_visited[i] @ final_states2
+
+        for f_state, f_id1 in automaton1.final_states_ids.items():
+            if final_states1[f_id1, 0]:
+                pairs.add(((s_state.value, f_state.value), (s_id, f_id1)))
 
     return pairs
 
@@ -556,7 +648,7 @@ def ms_bfs_based_rpq(
     ----------
     regex : str
         Regular expression defining the path constraint
-    graph : MultiDiGraph
+    graph : :class:`~networkx.MultiDiGraph`
         Graph where edges are labeled with symbols
     start_nodes : Set[int]
         Set of start nodes
@@ -569,51 +661,10 @@ def ms_bfs_based_rpq(
         Set of node pairs (start, final) connected by paths matching the regex
     """
     nfa = graph_to_nfa(graph, start_nodes, final_nodes)
-    graph_amfa = AdjacencyMatrixFA(nfa)
-    n = graph_amfa.count_states
+    amfa_graph = AdjacencyMatrixFA(nfa)
 
     dfa = regex_to_dfa(regex)
-    request_amfa = AdjacencyMatrixFA(dfa)
-    m = request_amfa.count_states
-    start_id_request = first(request_amfa.start_states_ids.items())[1]
+    amfa_request = AdjacencyMatrixFA(dfa)
 
-    fronts, matrices_visited = [], []
-    for _, start_id in graph_amfa.start_states_ids.items():
-        front = lil_array((n, m), dtype=bool)
-        front[start_id, start_id_request] = True
-        fronts.append(front)
-        matrices_visited.append(front.copy())
-
-    symbols = graph_amfa.symbols.intersection(request_amfa.symbols)
-    tr_adjacency_matrices_graph = dict(
-        (sym, m.transpose()) for sym, m in graph_amfa.adjacency_matrices.items()
-    )
-    matrix_true = csr_array((n, m), dtype=bool)
-    matrix_true[:, :] = True
-
-    while any(front.count_nonzero() for front in fronts):
-        for i in range(len(fronts)):
-            if not fronts[i].count_nonzero():
-                continue
-
-            for symbol in symbols:
-                tr_adj_matrix_graph = tr_adjacency_matrices_graph[symbol]
-                adj_matrix_request = request_amfa.adjacency_matrices[symbol]
-                fronts[i] += tr_adj_matrix_graph @ fronts[i] @ adj_matrix_request
-
-            fronts[i] = matrix_true - ((matrix_true - fronts[i]) + matrices_visited[i])
-            matrices_visited[i] += fronts[i]
-
-    final_states_request = lil_array((request_amfa.count_states, 1), dtype=bool)
-    for _, final_id in request_amfa.final_states_ids.items():
-        final_states_request[final_id, 0] = True
-
-    pairs = set()
-    for i, (s_state, _) in enumerate(graph_amfa.start_states_ids.items()):
-        final_states_graph = matrices_visited[i] @ final_states_request
-
-        for f_state, f_id in graph_amfa.final_states_ids.items():
-            if final_states_graph[f_id, 0]:
-                pairs.add((s_state.value, f_state.value))
-
-    return pairs
+    pairs = ms_bfs(amfa_graph, amfa_request)
+    return {values for values, _ in pairs}
