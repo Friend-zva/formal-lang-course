@@ -632,9 +632,9 @@ def ms_bfs(
     for i, (s_state, s_id) in enumerate(automaton1.start_states_ids.items()):
         final_states1 = matrices_visited[i] @ final_states2
 
-        for f_state, f_id1 in automaton1.final_states_ids.items():
-            if final_states1[f_id1, 0]:
-                pairs.add(((s_state.value, f_state.value), (s_id, f_id1)))
+        for f_state, f_id in automaton1.final_states_ids.items():
+            if final_states1[f_id, 0]:
+                pairs.add(((s_state.value, f_state.value), (s_id, f_id)))
 
     return pairs
 

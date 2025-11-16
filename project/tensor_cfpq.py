@@ -116,7 +116,6 @@ def tensor_based_cfpq(
     for var in rsm.labels:
         amfa_graph.add_symbol(var)
     adj_matrix_graph = amfa_graph.adjacency_matrices
-    n = amfa_graph.count_states
 
     fa_rsm = rsm_to_nfa(rsm)
     amfa_rsm = AdjacencyMatrixFA(fa_rsm)
@@ -127,11 +126,19 @@ def tensor_based_cfpq(
         is_changed = False
 
         amfa = intersect_automata(amfa_graph, amfa_rsm)
+        for _, id1 in amfa_graph.states_ids.items():
+            for state2, id2 in amfa_rsm.states_ids.items():
+                id = id1 * m + id2
+                if amfa_rsm.is_start_state(state2):
+                    amfa.add_start_state(id)
+                if amfa_rsm.is_final_state(state2):
+                    amfa.add_final_state(id)
+
         pairs = ms_bfs(amfa, amfa_rsm)
 
         for _, (s_id, f_id) in pairs:
-            s_id = s_id // m
-            f_id = f_id % n
+            s_id //= m
+            f_id //= m
             for symbol in amfa_graph.symbols:
                 if not adj_matrix_graph[symbol][s_id, f_id]:
                     adj_matrix_graph[symbol][s_id, f_id] = True
