@@ -11,12 +11,12 @@ def cfg_to_weak_normal_form(cfg: CFG) -> CFG:
     Parameters
     ----------
     cfg : :class:`~pyformlang.cfg.CFG`
-        An original CFG
+        An original Context-Free Grammar
 
     Returns
     -------
     cwnf : :class:`~pyformlang.cfg.CFG`
-        A new CFG equivalent in the CWNF
+        A new CFG equivalent in the Context-Weak-Free Grammar
     """
     cfg_nf = cfg.to_normal_form()
 
@@ -45,7 +45,7 @@ def hellings_based_cfpq(
     Parameters
     ----------
     cfg : :class:`~pyformlang.cfg.CFG`
-        CFG defining the path constraint
+        Context-Free Grammar defining the path constraint
     graph : :class:`~networkx.DiGraph`
         Graph where edges are labeled with symbols
     start_nodes : Set[int]

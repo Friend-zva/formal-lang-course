@@ -21,17 +21,17 @@ class MetadataGraph:
 
 
 def get_metadata(name_graph: str) -> MetadataGraph:
-    """Loads graph metadata from dataset.
+    """Loads graph metadata from dataset
 
     Parameters
     ----------
     name_graph : str
-        The name of the graph from the dataset.
+        The name of the graph from the dataset
 
     Returns
     -------
     metadata : MetadataGraph
-        Graph metadata.
+        Graph metadata
     """
     archive = cd.download(name_graph)
     graph = cd.graph_from_csv(archive)
@@ -45,38 +45,38 @@ def get_metadata(name_graph: str) -> MetadataGraph:
 
 def build_graph_two_cycles(n: int, m: int, labels: Tuple[str, str], path_save: Path):
     """Builds a graph with two cycles connected by one node. With labeled edges.
-    Saves it into DOT file with given path.
+    Saves it into DOT file with given path
 
     Parameters
     ----------
     n : int
-        The number of nodes in the first cycle without a common node.
+        The number of nodes in the first cycle without a common node
 
     m : int
-        The number of nodes in the second cycle without a common node.
+        The number of nodes in the second cycle without a common node
 
     labels : Tuple[str, str]
-        Labels that will be used to mark the edges of the graph.
+        Labels that will be used to mark the edges of the graph
 
     path_save : str or file
-        Filename or file handle for saving.
+        Filename or file handle for saving
     """
     graph = cd.labeled_two_cycles_graph(n, m, labels=labels)
     nx.drawing.nx_pydot.write_dot(graph, path_save)
 
 
 def regex_to_dfa(regex: str) -> DeterministicFiniteAutomaton:
-    """Transforms the regular expression into DFA.
+    """Transforms the regular expression into DFA
 
     Parameters
     ----------
     regex : str
-        The regex represented as a string.
+        The regex represented as a string
 
     Returns
     ----------
-    dfa : pyformlang.finite_automaton.DeterministicFiniteAutomaton
-        DFA equivalent to the regex.
+    dfa : :class:`~pyformlang.finite_automaton.DeterministicFiniteAutomaton`
+        Deterministic Finite Automaton equivalent to the regex
     """
     reg = Regex(regex)
     enfa = reg.to_epsilon_nfa()
@@ -87,23 +87,23 @@ def regex_to_dfa(regex: str) -> DeterministicFiniteAutomaton:
 def graph_to_nfa(
     graph: nx.MultiDiGraph, start_states: Set[int], final_states: Set[int]
 ) -> NondeterministicFiniteAutomaton:
-    """Imports a networkx graph into NFA. Adds new initial and final states.
+    """Imports a networkx graph into NFA. Adds new initial and final states
 
     Parameters
     ----------
-    graph : networkx.MultiDiGraph
-        The graph representation of the automaton.
+    graph : :class:`~networkx.MultiDiGraph`
+        The graph representation of the automaton
 
     start_states : Set[int]
-        New initial states.
+        New initial states
 
     final_states : Set[int]
-        New final states.
+        New final states
 
     Returns
     ----------
-    nfa : pyformlang.finite_automaton.NondeterministicFiniteAutomaton
-        NFA read from the graph.
+    nfa : :class:`~pyformlang.finite_automaton.NondeterministicFiniteAutomaton`
+        Nondeterministic Finite Automaton read from the graph
     """
     nfa = NondeterministicFiniteAutomaton.from_networkx(graph)
 
