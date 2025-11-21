@@ -61,6 +61,7 @@ class AdjacencyMatrixFA:
             self._init_from_arguments(
                 states_ids, symbols, adjacency_matrices, start_states, final_states
             )
+        self._ids_states_cache: Dict[int, State] | None = None
 
     def _init_from_arguments(
         self,
@@ -275,7 +276,24 @@ class AdjacencyMatrixFA:
         """The mapping of adjacency matrices to all symbols"""
         return self._adjacency_matrices.copy()
 
-    def get_state_id(self, state: Any) -> int | None:
+    def get_state_by_id(self, id: int) -> State | None:
+        """Get the state for an id
+
+        Parameters
+        ----------
+        id : Int
+            The id to look up
+
+        Returns
+        -------
+        state : int | None
+            The state if found, None otherwise
+        """
+        if self._ids_states_cache is None:
+            self._ids_states_cache = {id: st for st, id in self.states_ids.items()}
+        return self._ids_states_cache.get(id)
+
+    def get_id_by_state(self, state: Any) -> int | None:
         """Get the integer id for a state
 
         Parameters
@@ -303,6 +321,7 @@ class AdjacencyMatrixFA:
         """
         state = to_state(state)
         self._states_ids[state] = id
+        self._ids_states_cache = None
 
     def add_start_state(self, state: Any) -> bool:
         """Add a start state
@@ -384,9 +403,9 @@ class AdjacencyMatrixFA:
         is_transition : bool
             True if the transition exists
         """
-        state_from = self.get_state_id(state_from)
+        state_from = self.get_id_by_state(state_from)
         symbol = to_symbol(symbol)
-        state_to = self.get_state_id(state_to)
+        state_to = self.get_id_by_state(state_to)
         if state_from is not None and state_to is not None:
             return self._adjacency_matrices[symbol][state_from, state_to]
         else:
@@ -404,9 +423,9 @@ class AdjacencyMatrixFA:
         state_to : Any
             The destination state
         """
-        state_from = self.get_state_id(state_from)
+        state_from = self.get_id_by_state(state_from)
         symbol = to_symbol(symbol)
-        state_to = self.get_state_id(state_to)
+        state_to = self.get_id_by_state(state_to)
         if state_from is not None and state_to is not None:
             self._adjacency_matrices[symbol][state_from, state_to] = True
 
@@ -478,6 +497,27 @@ class AdjacencyMatrixFA:
 
         return next_states
 
+    def __str__(self) -> str:
+        lines = [
+            "Adjacency Matrix FA: (",
+            f"  States: {self._states_ids}",
+            f"  Symbols: {self._symbols}",
+            f"  Start states: {self._start_states}",
+            f"  Final states: {self._final_states}",
+            "  Adjacency matrices: (",
+        ]
+
+        for sym, matrix in self._adjacency_matrices.items():
+            lines.append(f'    "{sym}":')
+
+            matrix_array = matrix.toarray()
+            for i, row in enumerate(matrix_array):
+                lines.append(f"      {i}: {row}")
+
+        lines.append("  )")
+        lines.append(")")
+        return "\n".join(lines)
+
 
 def intersect_automata(
     automaton1: AdjacencyMatrixFA,
@@ -506,7 +546,7 @@ def intersect_automata(
             automaton1.adjacency_matrices[symbol],
             automaton2.adjacency_matrices[symbol],
             format="csr",
-        )
+        ).astype(bool)
 
     for state1, id1 in automaton1.states_ids.items():
         for state2, id2 in automaton2.states_ids.items():
