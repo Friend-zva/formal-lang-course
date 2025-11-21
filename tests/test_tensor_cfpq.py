@@ -1,5 +1,5 @@
 from pyformlang.cfg import CFG, Variable, Terminal, Production, Epsilon
-from networkx import DiGraph
+from networkx import MultiDiGraph, DiGraph
 
 
 from project.tensor_cfpq import cfg_to_rsm, tensor_based_cfpq
@@ -34,6 +34,32 @@ def test_tensor_based_cfpq():
 
     rsm = cfg_to_rsm(cfg)
     assert tensor_based_cfpq(rsm, graph, {0}, {0}) == {(0, 0)}
+
+
+def test_from_article():
+    graph = MultiDiGraph()
+    graph.add_nodes_from([0, 1, 2, 3])
+    graph.add_edges_from(
+        [
+            (0, 1, {"label": "a"}),
+            (1, 2, {"label": "a"}),
+            (2, 0, {"label": "a"}),
+            (2, 3, {"label": "b"}),
+            (3, 2, {"label": "b"}),
+        ]
+    )
+
+    cfg = CFG.from_text("S -> a S b | a b")
+    rsm = cfg_to_rsm(cfg)
+
+    assert tensor_based_cfpq(rsm, graph) == {
+        (1, 2),
+        (0, 3),
+        (2, 3),
+        (0, 2),
+        (2, 2),
+        (1, 3),
+    }
 
 
 def test_cfpqs():

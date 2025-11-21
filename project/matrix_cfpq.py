@@ -86,6 +86,7 @@ def matrix_based_cfpq(
 
     pairs = set()
     matrix = T[cwnf.start_symbol]
+
     rows, cols = matrix.nonzero()
     for i, j in zip(rows, cols):
         s, f = graph_id_to_v[i], graph_id_to_v[j]
