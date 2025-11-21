@@ -106,12 +106,8 @@ def tensor_based_cfpq(
     pairs : Set[Tuple[int, int]]
         Set of node pairs (start, final) connected by paths matching RSM
     """
-    if start_nodes is None:
-        start_nodes = set(graph.nodes)
-    if final_nodes is None:
-        final_nodes = set(graph.nodes)
-
-    fa_graph = graph_to_nfa(graph, start_nodes, final_nodes)
+    nodes = set(graph.nodes)
+    fa_graph = graph_to_nfa(graph, start_states=nodes, final_states=nodes)
     amfa_graph = AdjacencyMatrixFA(fa_graph)
     for var in rsm.labels:
         amfa_graph.add_symbol(var)
@@ -126,29 +122,25 @@ def tensor_based_cfpq(
         is_changed = False
 
         amfa = intersect_automata(amfa_graph, amfa_rsm)
-        for _, id1 in amfa_graph.states_ids.items():
-            for state2, id2 in amfa_rsm.states_ids.items():
-                id = id1 * m + id2
-                if amfa_rsm.is_start_state(state2):
-                    amfa.add_start_state(id)
-                if amfa_rsm.is_final_state(state2):
-                    amfa.add_final_state(id)
-
         pairs = ms_bfs(amfa, amfa_rsm)
 
         for _, (s_id, f_id) in pairs:
-            s_id //= m
-            f_id //= m
-            for symbol in amfa_graph.symbols:
-                if not adj_matrix_graph[symbol][s_id, f_id]:
-                    adj_matrix_graph[symbol][s_id, f_id] = True
-                    is_changed = True
+            s, f = s_id // m, f_id // m
+            var = amfa_rsm.get_state_by_id(s_id % m).value[0]
+            if var and not adj_matrix_graph[var][s, f]:
+                adj_matrix_graph[var][s, f] = True
+                is_changed = True
+
+    if start_nodes is None:
+        start_nodes = nodes
+    if final_nodes is None:
+        final_nodes = nodes
 
     pairs = set()
     matrix = adj_matrix_graph[rsm.initial_label]
 
-    for s_st_graph, s_id_graph in amfa_graph.start_states_ids.items():
-        for f_st_graph, f_id_graph in amfa_graph.final_states_ids.items():
+    for s_st_graph, s_id_graph in amfa_graph.states_ids.items():
+        for f_st_graph, f_id_graph in amfa_graph.states_ids.items():
             if matrix[s_id_graph, f_id_graph]:
                 if s_st_graph in start_nodes and f_st_graph in final_nodes:
                     pairs.add((s_st_graph.value, f_st_graph.value))
