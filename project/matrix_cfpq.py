@@ -1,10 +1,12 @@
 from typing import Set, Tuple, Dict
-from pyformlang.cfg import CFG, Terminal, Variable
+
 from networkx import DiGraph
 
 from scipy.sparse import lil_array
 
-from project.hellings_cfpq import cfg_to_weak_normal_form
+from pyformlang.cfg import CFG, Terminal, Variable
+
+from project.utils import cfg_to_weak_normal_form
 
 
 def matrix_based_cfpq(

@@ -1,9 +1,13 @@
+from networkx import MultiDiGraph
+
+from scipy.sparse import lil_array
+
 from pyformlang.finite_automaton import (
     NondeterministicFiniteAutomaton,
     DeterministicFiniteAutomaton,
 )
-from scipy.sparse import lil_array
-from networkx import MultiDiGraph
+
+from project.utils import regex_to_dfa
 
 from project.adjacency_matrix_fa import (
     AdjacencyMatrixFA,
@@ -11,7 +15,6 @@ from project.adjacency_matrix_fa import (
     tensor_based_rpq,
     ms_bfs_based_rpq,
 )
-from project.utils import regex_to_dfa
 
 
 def test_adjacency_matrix_fa_empty():

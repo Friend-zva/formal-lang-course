@@ -30,8 +30,8 @@ class TestHellingBasedCFPQ:
 
 def test_cfg_to_weak_normal_form_exists():
     try:
-        import project.hellings_cfpq
+        import project.utils
 
-        assert "cfg_to_weak_normal_form" in dir(project.hellings_cfpq)
+        assert "cfg_to_weak_normal_form" in dir(project.utils)
     except NameError:
         assert False

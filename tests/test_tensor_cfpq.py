@@ -1,8 +1,10 @@
-from pyformlang.cfg import CFG, Variable, Terminal, Production, Epsilon
 from networkx import MultiDiGraph, DiGraph
 
+from pyformlang.cfg import CFG, Variable, Terminal, Production, Epsilon
 
-from project.tensor_cfpq import cfg_to_rsm, tensor_based_cfpq
+from project.utils import cfg_to_rsm
+
+from project.tensor_cfpq import tensor_based_cfpq
 from project.matrix_cfpq import matrix_based_cfpq
 
 

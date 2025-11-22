@@ -1,7 +1,10 @@
-from pyformlang.cfg import CFG, Variable, Terminal, Production, Epsilon
 from networkx import DiGraph
 
-from project.hellings_cfpq import cfg_to_weak_normal_form, hellings_based_cfpq
+from pyformlang.cfg import CFG, Variable, Terminal, Production, Epsilon
+
+from project.utils import cfg_to_weak_normal_form
+
+from project.hellings_cfpq import hellings_based_cfpq
 
 
 def test_cfg_to_weak_normal_form():
