@@ -18,7 +18,7 @@ def matrix_based_cfpq(
     Parameters
     ----------
     cfg : :class:`~pyformlang.cfg.CFG`
-        CFG defining the path constraint
+        Context-Free Grammar defining the path constraint
     graph : :class:`~networkx.DiGraph`
         Graph where edges are labeled with symbols
     start_nodes : Set[int]
@@ -86,6 +86,7 @@ def matrix_based_cfpq(
 
     pairs = set()
     matrix = T[cwnf.start_symbol]
+
     rows, cols = matrix.nonzero()
     for i, j in zip(rows, cols):
         s, f = graph_id_to_v[i], graph_id_to_v[j]
