@@ -3,9 +3,10 @@ from collections import deque
 
 from networkx import DiGraph
 
-from pyformlang.cfg import CFG,  Terminal
+from pyformlang.cfg import CFG, Terminal
 
 from project.utils import cfg_to_weak_normal_form
+
 
 def hellings_based_cfpq(
     cfg: CFG,
