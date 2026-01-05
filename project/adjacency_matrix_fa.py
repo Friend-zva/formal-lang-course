@@ -27,7 +27,7 @@ def gen_empty_adjacency_matrices(
 
 
 class AdjacencyMatrixFA:
-    """Represents a finite automaton using adjacency matrices
+    """Represent a finite automaton using adjacency matrices
 
     Parameters
     ----------
@@ -125,7 +125,7 @@ class AdjacencyMatrixFA:
         )
 
     def accepts(self, word: Iterable[Any]) -> bool:
-        """Checks whether the AMFA accepts a given word
+        """Check whether the AMFA accepts a given word
 
         Parameters
         ----------
@@ -144,7 +144,7 @@ class AdjacencyMatrixFA:
         return any(self.is_final_state(st) for st in states)
 
     def is_empty(self) -> bool:
-        """Checks if the language represented by the AMFA is empty or not
+        """Check if the language represented by the AMFA is empty or not
 
         Returns
         ----------
@@ -196,7 +196,7 @@ class AdjacencyMatrixFA:
         return True
 
     def is_start_state(self, state: Any) -> bool:
-        """Checks if a state is start
+        """Check if a state is start
 
         Parameters
         ----------
@@ -212,7 +212,7 @@ class AdjacencyMatrixFA:
         return state in self._start_states
 
     def is_final_state(self, state: Any) -> bool:
-        """Checks if a state is final
+        """Check if a state is final
 
         Parameters
         ----------
