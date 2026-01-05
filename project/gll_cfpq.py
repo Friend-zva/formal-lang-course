@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Set, Tuple, Dict
+from collections import deque
 
 from networkx import DiGraph
 
@@ -30,7 +31,7 @@ State  : type
 
 @dataclass(frozen=True)
 class GSSNode:
-    """A node in GSS (Graph-Structured Stack)
+    """A node in GSS (Graph Structured Stack)
 
     Parameters
     ----------
@@ -45,7 +46,7 @@ class GSSNode:
 
 
 class GSStack:
-    """Represent Graph-Structured Stack for GLL-based context-free path querying"""
+    """Represent Graph Structured Stack for GLL-based context-free path querying"""
 
     def __init__(self):
         self._id_max: int = 0
@@ -92,7 +93,7 @@ class GSStack:
         return edge
 
     def get_node(self, id: int) -> GSSNode | None:
-        """Get a GSS node by its ID
+        """Get a GSS node by its id
 
         Parameters
         ----------
@@ -117,6 +118,17 @@ class GSStack:
         """
         return self._edges.copy()
 
+    @property
+    def count_edges(self) -> int:
+        """Get count of all edges in the GSS
+
+        Returns
+        -------
+        count : int
+            Count of edges
+        """
+        return len(self._edges)
+
 
 @dataclass(frozen=True)
 class Descriptor:
@@ -135,6 +147,78 @@ class Descriptor:
     node_graph: int
     state_rsm: RSMState
     id_node_gss: int
+
+
+class Process:
+    """Manage processing descriptors with LIFO order and uniqueness
+
+    Maintains three synchronized data structures:
+    - `process`: LIFO deque for descriptor processing order
+    - `_process`: Set for existence checks in processing queue and provides uniqueness
+    - `_processed`: Set for tracking already processed descriptors
+    """
+
+    def __init__(self):
+        self._id_max: int = 0
+        self.process: deque[Descriptor] = deque()
+        self._process: Set[Descriptor] = set()
+        self._processed: Set[Descriptor] = set()
+
+    def push(self, desc: Descriptor, processed=False):
+        """Add descriptor to processing queue
+
+        Parameters
+        ----------
+        desc : Descriptor
+            Descriptor to add for processing
+        processed : bool, default=False
+            If True, also marks descriptor as processed immediately
+            Used for initial descriptors to prevent reprocessing
+        """
+
+        if not processed:
+            self.process.append(desc)
+            self._process.add(desc)
+            return
+        if desc not in self._processed and desc not in self._process:
+            self.process.append(desc)
+            self._process.add(desc)
+            self._processed.add(desc)
+
+    def pop(self) -> Descriptor:
+        """Remove and return next descriptor from processing queue (LIFO)
+
+        Returns
+        -------
+        desc : Descriptor
+            Next descriptor for processing
+        """
+        desc = self.process.popleft()
+        self._process.remove(desc)
+        return desc
+
+    def edit(self, recall: Set[int]):
+        """Remove descriptors with specified GSS node ids from processed set
+
+        Parameters
+        ----------
+        recall : Set[int]
+            Set of GSS node ids
+        """
+        self._processed = {
+            desc for desc in self._processed if desc.id_node_gss not in recall
+        }
+
+    @property
+    def continues(self) -> bool:
+        """Check if processing queue has more descriptors
+
+        Returns
+        -------
+        cont : bool
+            True if processing queue is not empty
+        """
+        return bool(self.process)
 
 
 def gll_based_cfpq(
@@ -173,20 +257,19 @@ def gll_based_cfpq(
     transitions_rsm: Dict = nfa_rsm.to_dict()
 
     stack = GSStack()
-    process: Set[Descriptor] = set()
+    process = Process()
 
     for node in start_nodes:
         id = stack.add_node(GSSNode(start_state, node))
-        process.add(Descriptor(node, start_state, id))
+        desc = Descriptor(node, start_state, id)
+        process.push(desc)
 
     result = set()
-    processed: Set[Descriptor] = set()
-
-    while process:
+    while process.continues:
         desc = process.pop()
         state_from = to_state(desc.state_rsm)
 
-        processing: Set[Descriptor] = set()
+        processing: deque[Descriptor] = deque()
         recall: Set[int] = set()
 
         if state_from in nfa_rsm.final_states:
@@ -196,7 +279,7 @@ def gll_based_cfpq(
             else:
                 for src, sym, dst in stack.edges:
                     if src == desc.id_node_gss:
-                        processing.add(Descriptor(desc.node_graph, sym, dst))
+                        processing.append(Descriptor(desc.node_graph, sym, dst))
 
         paths: Dict = transitions_rsm.get(state_from, {})
         for sym_rsm, states_to in paths.items():
@@ -206,16 +289,16 @@ def gll_based_cfpq(
                     if sym_rsm.value != value[0]:
                         continue
                     id = stack.add_node(GSSNode(value, desc.node_graph))
-                    processing.add(Descriptor(desc.node_graph, value, id))
-                    cur_len = len(stack.edges)
+                    processing.append(Descriptor(desc.node_graph, value, id))
+                    count = stack.count_edges
                     for state_to in states_to:
                         stack.add_edge(id, state_to.value, desc.id_node_gss)
-                    if cur_len != len(stack.edges):
+                    if count != stack.count_edges:
                         recall.add(id)
                         for src, _, dst in stack.edges:
                             if dst == id:
                                 node = stack.get_node(src)
-                                processing.add(
+                                processing.append(
                                     Descriptor(node.node_graph, node.state_rsm, src)
                                 )
                                 recall.add(src)
@@ -223,17 +306,15 @@ def gll_based_cfpq(
                 for node_from, node_to, sym_g in graph.edges(data="label"):
                     if node_from == desc.node_graph and sym_rsm.value == sym_g:
                         for state_to in states_to:
-                            processing.add(
+                            processing.append(
                                 Descriptor(node_to, state_to.value, desc.id_node_gss)
                             )
 
         if recall:
-            processed = {item for item in processed if item.id_node_gss not in recall}
+            process.edit(recall)
 
-        for item in processing:
-            if item not in processed or item.id_node_gss in recall:
-                process.add(item)
-                processed.add(item)
+        for desc in processing:
+            process.push(desc, processed=True)
 
     if final_nodes is None:
         return result
