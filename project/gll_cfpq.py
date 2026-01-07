@@ -87,6 +87,11 @@ class GSStack:
             The return address (RSM state) as a label
         dst : int
             The destination GSS node id
+
+        Returns
+        -------
+        edge : Tuple[int, RSMState, int]
+            The added or existed edge
         """
         edge = (src, address_return, dst)
         self._edges.add(edge)
@@ -175,7 +180,6 @@ class Process:
             If True, also marks descriptor as processed immediately
             Used for initial descriptors to prevent reprocessing
         """
-
         if not processed:
             self.process.append(desc)
             self._process.add(desc)
@@ -276,6 +280,7 @@ def gll_based_cfpq(
             node_gss = stack.get_node(desc.id_node_gss)
             if desc.state_rsm == final_state:
                 result.add((node_gss.node_graph, desc.node_graph))
+                continue
             else:
                 for src, sym, dst in stack.edges:
                     if src == desc.id_node_gss:
@@ -286,22 +291,25 @@ def gll_based_cfpq(
             if sym_rsm in rsm.boxes:
                 for state in nfa_rsm.start_states:
                     value = state.value
-                    if sym_rsm.value != value[0]:
+                    if value[0] != sym_rsm.value:
                         continue
                     id = stack.add_node(GSSNode(value, desc.node_graph))
                     processing.append(Descriptor(desc.node_graph, value, id))
                     count = stack.count_edges
                     for state_to in states_to:
                         stack.add_edge(id, state_to.value, desc.id_node_gss)
-                    if count != stack.count_edges:
-                        recall.add(id)
-                        for src, _, dst in stack.edges:
-                            if dst == id:
-                                node = stack.get_node(src)
-                                processing.append(
-                                    Descriptor(node.node_graph, node.state_rsm, src)
-                                )
-                                recall.add(src)
+                    if count == stack.count_edges:
+                        continue
+                    recall.add(id)
+                    recall.add(desc.id_node_gss)
+                    for src, _, dst in stack.edges:
+                        if dst != id:
+                            continue
+                        node = stack.get_node(src)
+                        processing.append(
+                            Descriptor(node.node_graph, node.state_rsm, src)
+                        )
+                        recall.add(src)
             else:
                 for node_from, node_to, sym_g in graph.edges(data="label"):
                     if node_from == desc.node_graph and sym_rsm.value == sym_g:
