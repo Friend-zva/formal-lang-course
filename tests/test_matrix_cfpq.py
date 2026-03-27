@@ -1,5 +1,6 @@
-from pyformlang.cfg import CFG, Variable, Terminal, Production, Epsilon
 from networkx import DiGraph
+
+from pyformlang.cfg import CFG, Variable, Terminal, Production, Epsilon
 
 from project.matrix_cfpq import matrix_based_cfpq
 

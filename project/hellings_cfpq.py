@@ -1,37 +1,11 @@
 from typing import Set, Tuple
-from pyformlang.cfg import CFG, Production, Epsilon, Terminal
-from networkx import DiGraph
-
 from collections import deque
 
+from networkx import DiGraph
 
-def cfg_to_weak_normal_form(cfg: CFG) -> CFG:
-    """Gets the Chomsky Weakened Normal Form of a Context Free Grammar
+from pyformlang.cfg import CFG, Terminal
 
-    Parameters
-    ----------
-    cfg : :class:`~pyformlang.cfg.CFG`
-        An original Context-Free Grammar
-
-    Returns
-    -------
-    cwnf : :class:`~pyformlang.cfg.CFG`
-        A new CFG equivalent in the Context-Weak-Free Grammar
-    """
-    cfg_nf = cfg.to_normal_form()
-
-    prods_eps = set(cfg_nf.productions)
-
-    for var in cfg.get_nullable_symbols():
-        prods_eps.add(Production(var, [Epsilon()]))
-
-    cwnf = CFG(
-        variables=cfg_nf.variables,
-        terminals=cfg_nf.terminals,
-        start_symbol=cfg_nf.start_symbol,
-        productions=prods_eps,
-    )
-    return cwnf.remove_useless_symbols()
+from project.utils import cfg_to_weak_normal_form
 
 
 def hellings_based_cfpq(

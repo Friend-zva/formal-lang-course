@@ -1,15 +1,16 @@
 from pathlib import Path
+
+import networkx as nx
+import cfpq_data as cd
+
+from pyformlang.finite_automaton import NondeterministicFiniteAutomaton
+
 from project.utils import (
     get_metadata,
     build_graph_two_cycles,
     regex_to_dfa,
     graph_to_nfa,
 )
-from pyformlang.finite_automaton import NondeterministicFiniteAutomaton
-
-import networkx as nx
-import cfpq_data as cd
-
 
 PATH_GRAPHS = Path(__file__).parent / "graphs"
 

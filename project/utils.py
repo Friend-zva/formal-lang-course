@@ -8,9 +8,12 @@ import networkx as nx
 from pyformlang.finite_automaton import (
     DeterministicFiniteAutomaton,
     NondeterministicFiniteAutomaton,
-    State,
 )
+from pyformlang.finite_automaton.finite_automaton import to_state, to_symbol
 from pyformlang.regular_expression import Regex
+
+from pyformlang.rsa import RecursiveAutomaton
+from pyformlang.cfg import CFG, Production, Epsilon
 
 
 @dataclass
@@ -108,9 +111,108 @@ def graph_to_nfa(
     nfa = NondeterministicFiniteAutomaton.from_networkx(graph)
 
     for state in start_states or graph.nodes:
-        nfa.add_start_state(State(state))
+        nfa.add_start_state(to_state(state))
 
     for state in final_states or graph.nodes:
-        nfa.add_final_state(State(state))
+        nfa.add_final_state(to_state(state))
+
+    return nfa
+
+
+def cfg_to_weak_normal_form(cfg: CFG) -> CFG:
+    """Gets the Chomsky Weakened Normal Form of a Context Free Grammar
+
+    Parameters
+    ----------
+    cfg : :class:`~pyformlang.cfg.CFG`
+        An original Context-Free Grammar
+
+    Returns
+    -------
+    cwnf : :class:`~pyformlang.cfg.CFG`
+        A new CFG equivalent in the Context-Weak-Free Grammar
+    """
+    cfg_nf = cfg.to_normal_form()
+
+    prods_eps = set(cfg_nf.productions)
+
+    for var in cfg.get_nullable_symbols():
+        prods_eps.add(Production(var, [Epsilon()]))
+
+    cwnf = CFG(
+        variables=cfg_nf.variables,
+        terminals=cfg_nf.terminals,
+        start_symbol=cfg_nf.start_symbol,
+        productions=prods_eps,
+    )
+    return cwnf.remove_useless_symbols()
+
+
+def cfg_to_rsm(cfg: CFG) -> RecursiveAutomaton:
+    """Transforms the CFG into RSM
+
+    Parameters
+    ----------
+    cfg : :class:`~pyformlang.cfg.CFG`
+        Context-Free Grammar
+
+    Returns
+    -------
+    rsm : :class:`~pyformlang.rsa.RecursiveAutomaton`
+        Recursive State Machine equivalent to the CFG
+    """
+    cfg_str = cfg.to_text()
+    return RecursiveAutomaton.from_text(cfg_str)
+
+
+def ebnf_to_rsm(ebnf: str) -> RecursiveAutomaton:
+    """Transforms the EBNF into RSM
+
+    Parameters
+    ----------
+    ebnf : str
+        Extended Backus-Naur Form
+
+    Returns
+    -------
+    rsm : :class:`~pyformlang.rsa.RecursiveAutomaton`
+        Recursive State Machine equivalent to the EBNF
+    """
+    return RecursiveAutomaton.from_text(ebnf)
+
+
+def rsm_to_nfa(rsm: RecursiveAutomaton) -> NondeterministicFiniteAutomaton:
+    """Transforms the RSM into NFA
+
+    Parameters
+    ----------
+    rsm : :class:`~pyformlang.rsa.RecursiveAutomaton`
+        Recursive State Machine
+
+    Returns
+    -------
+    nfa : :class:`~pyformlang.finite_automaton.NondeterministicFiniteAutomaton`
+        Nondeterministic Finite Automaton equivalent to the RSM
+    """
+    nfa = NondeterministicFiniteAutomaton()
+
+    for var, box in rsm.boxes.items():
+        dfa: DeterministicFiniteAutomaton = box.dfa
+
+        for state in dfa.start_states:
+            state = to_state((var, state))
+            nfa.add_start_state(state)
+
+        for state in dfa.final_states:
+            state = to_state((var, state))
+            nfa.add_final_state(state)
+
+        graph = dfa.to_networkx()
+        for src, dst, sym in graph.edges(data="label"):
+            if sym:
+                src = to_state((var, src))
+                dst = to_state((var, dst))
+                sym = to_symbol(sym)
+                nfa.add_transition(src, sym, dst)
 
     return nfa
